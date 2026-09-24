@@ -66,9 +66,16 @@ const RECIPES = {
     tone(ctx, { start: t0 + 0.16, duration: 0.22, freqStart: 850, freqEnd: 350, type: "triangle", gain: 0.22 });
   },
   dog(ctx, t0) {
-    // Two quick low bursts, roughly "bark bark".
-    tone(ctx, { start: t0, duration: 0.11, freqStart: 220, freqEnd: 140, type: "square", gain: 0.28 });
-    tone(ctx, { start: t0 + 0.16, duration: 0.11, freqStart: 220, freqEnd: 140, type: "square", gain: 0.28 });
+    // "Ruff-ruff": a noisy transient for the sharp attack, a fast-falling
+    // sawtooth for the bark's body, and a low square layer underneath for
+    // some chest resonance.
+    function bark(start) {
+      noiseBurst(ctx, { start, duration: 0.02, gain: 0.2, filterFreq: 900 });
+      tone(ctx, { start, duration: 0.1, freqStart: 650, freqEnd: 130, type: "sawtooth", gain: 0.3 });
+      tone(ctx, { start, duration: 0.1, freqStart: 260, freqEnd: 90, type: "square", gain: 0.16 });
+    }
+    bark(t0);
+    bark(t0 + 0.19);
   },
   pigeon(ctx, t0) {
     // Two soft, low warbling coos.
@@ -76,10 +83,15 @@ const RECIPES = {
     tone(ctx, { start: t0 + 0.32, duration: 0.34, freqStart: 320, freqEnd: 230, type: "sine", gain: 0.14 });
   },
   rat(ctx, t0) {
-    // Three very quick high-pitched squeaks.
-    [0, 0.08, 0.16].forEach((offset) => {
-      tone(ctx, { start: t0 + offset, duration: 0.05, freqStart: 3200, freqEnd: 2000, type: "sine", gain: 0.14 });
-    });
+    // Real rodent squeaks rise sharply then flick back down, rather than
+    // just falling — three of those in quick succession.
+    function squeak(start) {
+      tone(ctx, { start, duration: 0.035, freqStart: 2200, freqEnd: 4900, type: "sine", gain: 0.16 });
+      tone(ctx, { start: start + 0.03, duration: 0.03, freqStart: 4900, freqEnd: 3000, type: "sine", gain: 0.14 });
+    }
+    squeak(t0);
+    squeak(t0 + 0.11);
+    squeak(t0 + 0.22);
   },
   squirrel(ctx, t0) {
     // Rapid high chittering.
