@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { AnimalMesh, RAT_MODEL_URL, CAT_MODEL_URL, SQUIRREL_MODEL_URL } from "./AnimalModels";
+import { AnimalMesh, RAT_MODEL_URL, CAT_MODEL_URL, SQUIRREL_MODEL_URL, PIGEON_MODEL_URL } from "./AnimalModels";
 import { GltfCritter } from "./GltfCritter";
 
 function backOut(t) {
@@ -81,6 +81,7 @@ export function AnimalScene({ trackedRef }) {
     GltfCritter.preload(RAT_MODEL_URL);
     GltfCritter.preload(CAT_MODEL_URL);
     GltfCritter.preload(SQUIRREL_MODEL_URL);
+    GltfCritter.preload(PIGEON_MODEL_URL);
   }, []);
 
   return (
