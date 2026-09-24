@@ -27,7 +27,7 @@ const REMOVE_MS = 2000; // untracked entirely; re-appearance triggers a fresh di
 // pipeline entirely outside React state, so a busy scene with several QR
 // codes doesn't cause a re-render every frame. The only thing that crosses
 // back into React is the onDiscover callback, fired once per fresh sighting.
-export function useQRScanner({ videoRef, canvasRef, active, onDiscover }) {
+export function useQRScanner({ videoRef, canvasRef, active, onDiscover, trackedRef }) {
   const onDiscoverRef = useRef(onDiscover);
   useEffect(() => {
     onDiscoverRef.current = onDiscover;
@@ -46,7 +46,10 @@ export function useQRScanner({ videoRef, canvasRef, active, onDiscover }) {
     let detectionScaleY = 1;
     let lastScanTime = -SCAN_INTERVAL_MS;
     let rafId = null;
-    const tracked = new Map();
+    // Shared with the 3D layer (AnimalScene) when a trackedRef is supplied,
+    // so it can read the same live entries from its own render loop without
+    // this hook needing to know anything about three.js.
+    const tracked = trackedRef ? (trackedRef.current = new Map()) : new Map();
 
     function setupForVideoSize() {
       canvas.width = video.videoWidth;
@@ -127,5 +130,5 @@ export function useQRScanner({ videoRef, canvasRef, active, onDiscover }) {
       if (rafId) cancelAnimationFrame(rafId);
       video.removeEventListener("loadedmetadata", setupForVideoSize);
     };
-  }, [active, videoRef, canvasRef]);
+  }, [active, videoRef, canvasRef, trackedRef]);
 }

@@ -61,32 +61,24 @@ function drawUnknownLabel(ctx, location, opacity) {
   ctx.restore();
 }
 
+// The animal itself is now rendered by the 3D layer (see src/three/) reading
+// the same tracked-entry data from its own render loop -- this just draws
+// its caption underneath, still growing in step with the same pop-in easing
+// so the two don't feel disconnected.
 function drawAnimal(ctx, entry, now, drawX, drawY) {
   const { location, opacity, animal, discoveredAt } = entry;
-  // Size still tracks the QR's on-screen size (closer/bigger QR = bigger
-  // animal); only the position is decoupled from the QR's location.
   const size = averageSideLength(location);
-
-  // Pop-in scale for the first ~280ms after discovery, then a gentle idle
-  // bounce for as long as the animal stays visible.
   const age = now - discoveredAt;
-  const popIn = Math.min(1, easeOutBack(Math.min(1, age / 280)));
-  const bounce = Math.sin(now / 260 + discoveredAt) * size * 0.05;
-
-  const emojiSize = size * 1.1 * popIn;
-  const centerY = drawY + bounce;
-
-  ctx.save();
-  ctx.globalAlpha = opacity;
-  ctx.font = `${emojiSize}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(animal.emoji, drawX, centerY);
+  const popIn = Math.max(0, Math.min(1, easeOutBack(Math.min(1, age / 280))));
+  const modelSize = size * 1.1 * popIn;
 
   const fontSize = Math.max(14, size * 0.16);
+  ctx.save();
+  ctx.globalAlpha = opacity;
   ctx.font = `600 ${fontSize}px sans-serif`;
+  ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  const captionY = centerY + emojiSize * 0.55 + 10;
+  const captionY = drawY + modelSize * 0.55 + 10;
   const text = animal.caption;
   const textWidth = ctx.measureText(text).width;
   ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
