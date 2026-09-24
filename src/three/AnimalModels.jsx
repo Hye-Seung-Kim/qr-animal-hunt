@@ -335,6 +335,7 @@ export const RAT_MODEL_URL = "/assets/models/rat.glb";
 export const CAT_MODEL_URL = "/assets/models/cat.glb";
 export const SQUIRREL_MODEL_URL = "/assets/models/squirrel.glb";
 export const PIGEON_MODEL_URL = "/assets/models/pigeon.glb";
+export const DOG_MODEL_URL = "/assets/models/dog.glb";
 
 function GltfRat() {
   return <GltfCritter url={RAT_MODEL_URL} targetSize={1.5} />;
@@ -352,8 +353,12 @@ function GltfPigeon() {
   return <GltfCritter url={PIGEON_MODEL_URL} targetSize={1.5} />;
 }
 
+function GltfDog() {
+  return <GltfCritter url={DOG_MODEL_URL} targetSize={1.5} />;
+}
+
 const SPECIES = {
-  dog: Dog,
+  dog: GltfDog,
   cat: GltfCat,
   pigeon: GltfPigeon,
   rat: GltfRat,
