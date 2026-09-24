@@ -1,197 +1,202 @@
 # Animal Hunt
 
-A mobile-friendly, real-time multiplayer QR scavenger hunt. Everyone joins the
-same room on their own phone, the host starts a 5-round game, each round
-calls out a target animal, and whoever scans the matching physical QR code
-first wins the round. Point your phone's camera at a QR code and a matching
-animal pops up on screen with its sound.
+A multiplayer QR scavenger hunt for mobile browsers. Join a room, find the
+animal shown on screen, and scan its QR code before everyone else. Recognized
+codes bring up animated, low-poly 3D animals over the camera view with
+synthesized animal sounds.
 
-## Live demo
+[Play Animal Hunt](https://qr-animal-hunt.netlify.app) ·
+[Printable QR codes](https://qr-animal-hunt.netlify.app/test-qr-codes.html)
 
-https://qr-animal-hunt.netlify.app
+## How to play
 
-Open on your phone, allow camera access, and scan a QR code from
-https://qr-animal-hunt.netlify.app/test-qr-codes.html (pull that page up on a
-second screen) — or the real physical QR codes the payloads in
-`src/data/animals.js` are mapped to.
+1. Print the QR codes and place them around the play area, or open the QR
+   code page on a second screen for testing.
+2. Open the game on each player's phone and choose a username.
+3. Have one player create a room and share its five-character code. Everyone
+   else joins with that code. Active players in a room need distinct usernames
+   (case-insensitive).
+4. The host selects **Start Game**. Allow camera access when the first round
+   opens, then look for the target animal's QR code.
+5. Play five rounds of up to 60 seconds each. The first accepted matching scan
+   earns one point; a wrong animal earns none and the round continues. A timeout
+   awards no points. Results appear between rounds, followed by the final
+   leaderboard. The host can select **Play Again** to reuse the room.
 
-## Setup
+## Features
 
-1. `npm install`
-2. Create a Supabase project, then run `sql/schema.sql` once in its SQL
-   Editor (Dashboard -> SQL Editor -> New query -> paste -> Run). This creates
-   the `rooms`/`players`/`rounds` tables, RLS policies, and adds them to the
-   `supabase_realtime` publication.
-3. Copy `.env.local.example` to `.env.local` and fill in your project's URL
-   and anon/publishable key (Dashboard -> Project Settings -> API). Never use
-   the `service_role` key here — it's server-only.
-4. `npm run dev`
+- Shared room, player, and round state through Supabase Realtime.
+- QR recognition with `jsQR`, including tracking and scan feedback.
+- Six procedural 3D animals rendered with Three.js and React Three Fiber.
+- Animal sounds generated with the Web Audio API; no audio files required.
+- Session-based rejoining after a page refresh and automatic host transfer
+  when the host disconnects and another active player remains online.
+- No account or login required.
 
-For Netlify, set the same two env vars on the site (`netlify env:set
-VITE_SUPABASE_URL ...` / `VITE_SUPABASE_ANON_KEY ...`) — Vite bakes them into
-the build, so they must exist at build time, not just at runtime.
+## Local setup
 
-## How the multiplayer game works
+### Requirements
 
-State machine: `LandingScreen` (username -> create/join room) hands off to
-`InRoom`, which renders a screen purely as a function of the current room row
-from Supabase — `waiting` -> `WaitingRoom`, `countdown` -> `CountdownOverlay`,
-`playing` -> `RoundScreen` or `RoundResultScreen` depending on the current
-round's status, `finished` -> `FinalLeaderboard`. No client-local game state
-machine to keep in sync; the room row *is* the state machine.
+- Node.js 22.12+ and npm.
+- A Supabase project with access to its SQL Editor.
+- A camera-equipped browser with WebGL support for gameplay.
 
-- **No login.** Each browser generates a random id (`src/lib/playerIdentity.js`,
-  kept in `sessionStorage`) and a chosen username (kept in `localStorage` for
-  convenience only). Room codes are 5 unambiguous characters
-  (`src/lib/roomCode.js`).
-- **Realtime sync** (`src/hooks/useRoomChannel.js`): subscribes to Postgres
-  Changes on all three tables plus a Presence channel for "who's actually
-  connected." On any change it refetches the room/players/rounds snapshot —
-  these tables are tiny, so this is simpler and just as fast as patching
-  state in place.
-- **Server-authoritative timer:** a round stores `ends_at`; every client
-  computes its own countdown from that shared timestamp
-  (`src/hooks/useRoundTimer.js`), so nobody's countdown depends on when they
-  joined.
-- **Atomic first-scan-wins** (`attemptRoundWin` in `src/lib/gameApi.js`): the
-  winning update is `UPDATE rounds SET winner_player_id = ... WHERE id = ...
-  AND winner_player_id IS NULL`. Postgres re-checks that `WHERE` clause after
-  acquiring the row's lock, so concurrent attempts from different players
-  serialize correctly — only the first one actually updates a row. No custom
-  database function needed.
-- **Host-driven pacing** (`src/hooks/useHostRoundDirector.js`): there's no
-  server/Edge Function in this MVP, so the host's own browser is the single
-  writer that creates each round row, detects a round timing out, and
-  advances to the next round or finishes the game. Every other client just
-  reacts to the resulting row changes.
-- **Host failover** (`src/hooks/useHostFailover.js`): if presence shows the
-  host has been gone for a few seconds, the earliest-joined still-connected
-  player claims the role, guarded by the same atomic-`UPDATE`-with-`WHERE`
-  pattern so two clients racing to claim it can't both succeed.
-- **Scoring** is derived client-side from `rounds.winner_player_id` counts
-  (`FinalLeaderboard.jsx`) rather than kept in a separate table — five rows
-  per game is cheap to fetch and count.
-- The camera/QR/overlay/sound layer from the single-player prototype is
-  reused as-is (see below) — `RoundScreen` just wires `CameraView`'s
-  `onDiscover` callback to check the scanned id against the round's target
-  animal instead of a local collection.
-
-### Known limitation: no real auth
-
-There's no login system (by design, per the product spec), so the RLS
-policies in `sql/schema.sql` allow the anon key to read/write all three
-tables — any client could, in principle, tamper with any room's data. That's
-an accepted tradeoff for a casual, no-stakes party game. Don't reuse this
-schema as-is for anything where that matters.
-
-## QR scanning / overlay / sound (shared with the single-player prototype)
-
-- `getUserMedia()` requests the rear-facing camera only once the player has
-  entered a username (first user gesture in the app), which is also where the
-  `AudioContext` is unlocked for mobile autoplay restrictions.
-- `jsQR` decodes downscaled frames; masking each decoded region lets multiple
-  QR codes be found in a single frame (`src/lib/qrGeometry.js`, ported from
-  the original qrcode-tracking prototype).
-- `src/hooks/useQRScanner.js` runs the whole scan/track/draw loop outside
-  React state for performance, and only calls back into React (`onDiscover`)
-  once per fresh sighting. It also owns detection stability: a QR that blinks
-  out for under 500ms doesn't flicker, it fades over the next ~700ms, and
-  after 2s of being gone it's fully forgotten — so scanning it again later
-  counts as a fresh discovery.
-- `src/lib/overlayRenderer.js` draws the QR's bounding box (for scan
-  feedback) plus the animal + caption, pinned to the center of the screen
-  rather than the QR's own position — anchoring directly to the QR read
-  poorly when it was held off to one side of frame.
-- `src/lib/sounds.js` synthesizes each animal's sound with the Web Audio API,
-  so the app ships with zero binary audio assets. See "Using real art/audio"
-  below to swap in real files.
-
-## Add a new animal
-
-Edit `src/data/animals.js` — add an entry keyed by the exact QR code payload,
-add its id to `ANIMAL_ORDER`, and add a synthesis recipe for its `soundType`
-in `src/lib/sounds.js`. Nothing else needs to change.
-
-## Using real art/audio instead of emoji/synthesized sound
-
-1. Drop a PNG into `public/assets/animals/` and an mp3 into
-   `public/assets/sounds/`.
-2. Set `image`/`soundUrl` on that animal's entry in `src/data/animals.js`.
-3. Update `src/lib/overlayRenderer.js` to draw `animal.image` (via a preloaded
-   `Image`/`HTMLImageElement`) when present, falling back to `animal.emoji`
-   otherwise, and update `src/lib/sounds.js`'s `playAnimalSound` to play a
-   preloaded `<audio>`/`AudioBuffer` when `soundUrl` is present.
-
-## Generate test QR codes
+### 1. Install dependencies
 
 ```bash
-npm run generate-qr
+npm ci
+cp .env.local.example .env.local
 ```
 
-Regenerates `public/qr-codes/*.svg` and `public/test-qr-codes.html` from
-whatever payloads are in `src/data/animals.js` — a printable page listing all
-configured animal QR codes, useful for pulling up on a second screen while
-testing.
+### 2. Set up Supabase
 
-## Run locally
+For a new database, run [`sql/schema.sql`](sql/schema.sql) once in the
+Supabase SQL Editor. It creates the `rooms`, `players`, and `rounds` tables,
+indexes, row-level security policies, and Realtime publication entries.
+The publication statement is intended for initial setup; rerunning the whole
+file after the tables have been added to Realtime can produce an error.
+
+For an older installation without the unique-username index, run
+[`sql/002_unique_username_per_room.sql`](sql/002_unique_username_per_room.sql).
+New installations already include this index in the main schema. Existing
+active duplicate usernames must be resolved before applying the index.
+
+Fill in `.env.local` using your project's URL and public anon or publishable key:
+
+```dotenv
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-or-publishable-key
+```
+
+These values are included in the browser build. Never use a `service_role`
+or secret key here. Keep `.env.local` out of version control.
+
+### 3. Start the app
 
 ```bash
-npm install
 npm run dev
 ```
 
-Then open the printed local URL. Camera access requires HTTPS in production,
-but `localhost` is exempt so this works over plain HTTP during development.
+Open the local URL printed by Vite. The QR sheet is available at
+`/test-qr-codes.html` on the same server.
 
-To test with multiple phones on the same network, use `npm run dev -- --host`
-and open the printed LAN URL on each phone.
+Camera access requires a secure context. `http://localhost` works on the
+computer running Vite, but an ordinary HTTP LAN address on a phone does not.
+For phone testing, use an HTTPS deployment or an HTTPS development setup.
+`npm run dev -- --host` exposes the server to the network but does not enable
+HTTPS by itself.
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Build the production app into `dist/` |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Check source files with Oxlint |
+| `npm run generate-qr` | Regenerate the SVG QR codes and printable HTML page |
+
+## Animals and QR codes
+
+QR payloads must match the keys in [`src/data/animals.js`](src/data/animals.js)
+exactly. Encode the payload itself, not a URL or the animal's display name.
+
+| Animal | QR payload |
+| --- | --- |
+| Dog | `object-c` |
+| Cat | `notebook` |
+| Pigeon | `object-b` |
+| Rat | `bottle` |
+| Squirrel | `phone` |
+| Cockroach | `object-a` |
+
+To add an animal:
+
+1. Add its entry to `ANIMALS` and its ID to `ANIMAL_ORDER` in
+   `src/data/animals.js`.
+2. Add a model and register its `soundType` in the `SPECIES` map in
+   `src/three/AnimalModels.jsx`. The 3D scene uses `soundType` to select a model.
+3. Add its synthesized sound in `src/lib/sounds.js`.
+4. Update the separate `CODES` list in `scripts/generate-qr-codes.mjs`, then
+   run `npm run generate-qr`.
+
+The generator maintains its own list; it does not import `animals.js`.
+Generated files are saved in `public/qr-codes/` and
+`public/test-qr-codes.html`. The `image` and `soundUrl` fields in animal data
+are placeholders; setting them alone does not load custom artwork or audio.
+
+## Project structure
+
+```text
+src/
+  components/multiplayer/  Lobby, countdown, rounds, and leaderboard
+  components/CameraView.jsx  Camera, QR overlay, and lazy-loaded 3D scene
+  data/animals.js         QR payloads and animal metadata
+  hooks/                  Camera, scanning, Realtime, timers, and host logic
+  lib/                    Supabase API, player identity, drawing, and sounds
+  three/                  Procedural animal models and animated scene
+sql/                      Database schema and migration
+scripts/                  QR code generator
+public/                   Printable QR page and generated SVGs
+```
+
+## Multiplayer behavior and limitations
+
+Supabase stores the shared game state. Clients subscribe to database changes
+and refetch the room snapshot; Presence tracks connected players. Round wins
+use a conditional update that only succeeds while the round is active and
+has no winner, preventing simultaneous claims from awarding multiple wins.
+Scores are derived from completed round winners.
+
+The host's browser creates rounds, marks timeouts, and advances the game.
+Round timestamps originate on that browser and are stored in Supabase;
+clients calculate the countdown using their own clocks. Timing therefore
+depends on device clocks, network latency, and the host remaining active.
+If the host disconnects, the earliest-joined online active player can take
+over after a grace period. Progress may pause during that transfer.
+
+Player identity and the current room are kept in `sessionStorage`, so a
+refresh can restore the session. The preferred username is remembered in
+`localStorage`; it is not an authenticated identity.
+
+This is a casual game prototype: the database policies allow public clients
+to read and write game data. Room codes do not provide access control, and
+scan validation and host permissions are enforced by the app rather than a
+trusted server. Competitive or private use requires authentication, tighter
+database policies, and server-side validation.
 
 ## Deploy to Netlify
 
-`netlify.toml` is already configured:
+1. Connect this repository to a Netlify site.
+2. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the site's build
+   environment using the same values as local development.
+3. Deploy. [`netlify.toml`](netlify.toml) sets `npm run build` as the build
+   command, publishes `dist/`, and includes the app fallback redirect.
 
-```toml
-[build]
-command = "npm run build"
-publish = "dist"
+If the Netlify CLI is installed and the site is linked, you can also run:
+
+```bash
+netlify deploy --prod --build
 ```
 
-Connect the repo in Netlify, or run `netlify deploy --prod --build` locally.
-Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as site env vars (see
-Setup above) — without them the build ships with no working backend.
+Vite embeds environment variables at build time. Redeploy after changing
+those values; changing only the runtime environment does not update the app.
 
-## Testing checklist
+## Manual verification
 
-**Setup**
-- [ ] `sql/schema.sql` has been run in the Supabase SQL Editor
-- [ ] `.env.local` (dev) and Netlify env vars (prod) both have the URL + anon key
+Use two phones or independent browser sessions against the same Supabase project.
 
-**Room flow (2+ phones)**
-- [ ] Creating a room shows a room code; joining with that code puts both
-      players in the same waiting room in real time
-- [ ] Only the host sees "Start Game"; others see "Waiting for host..."
-- [ ] Tapping Start shows a synchronized-enough 3-2-1-GO on all phones
+- Create and join a room; confirm that both players appear and duplicate
+  usernames are rejected.
+- Start as the host; confirm that both players see the same target and round.
+- Scan a wrong animal, then the correct one; verify the feedback, 3D model,
+  sound, and a single winner when both players scan together.
+- Let a round time out; confirm that nobody receives a point.
+- Complete five rounds and check the scores, tied ranks, and **Play Again** flow.
+- Refresh during play and confirm that the session returns to the room.
+- Disconnect the host and check that another online player takes over.
+- Check camera permission, sound, and screen rotation on iPhone Safari and
+  Android Chrome over HTTPS.
 
-**Round flow**
-- [ ] All players see the same target animal and a timer counting down from
-      the same moment
-- [ ] Scanning the wrong QR shows "Not this one!" without ending the round
-- [ ] The first phone to scan the correct QR wins the round for everyone;
-      other phones show who won and their time
-- [ ] Letting the timer hit 0 with nobody scanning shows "TIME'S UP!" and
-      awards no points
-- [ ] After 5 rounds, everyone sees the same final leaderboard with correct
-      tied ranks
-
-**Resilience**
-- [ ] Refreshing a phone mid-game rejoins the same room and shows the current
-      state (no full restart)
-- [ ] Closing the host's tab mid-game eventually transfers host to another
-      connected player (a few seconds' delay is expected)
-- [ ] "Play Again" (host only) resets scores/rounds but keeps the same room
-      and players
-
-**Mobile basics (iPhone Safari + Android Chrome)**
-- [ ] Camera permission is requested only after entering a username
-- [ ] Rear camera is used by default; screen rotation doesn't break layout
-- [ ] Sounds play after that first tap (not blocked by autoplay policy)
+`npm run lint` and `npm run build` provide static and build checks. There is
+currently no automated gameplay test suite.
