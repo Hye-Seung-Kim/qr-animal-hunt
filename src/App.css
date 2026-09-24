@@ -197,6 +197,26 @@
   font-size: 0.85rem;
 }
 
+.chosen-username {
+  color: #d4d4d8;
+  font-size: 0.95rem;
+  margin: 0 0 4px;
+}
+
+.chosen-username strong {
+  color: #f4f4f5;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #4ade80;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .landing-error {
   color: #fca5a5;
   font-size: 0.9rem;

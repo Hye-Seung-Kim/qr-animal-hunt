@@ -37,6 +37,12 @@ export function LandingScreen({ onCreateRoom, onJoinRoom, busy, errorMessage }) 
         </>
       ) : (
         <div className="room-choice">
+          <p className="chosen-username">
+            Playing as <strong>{username}</strong>{" "}
+            <button type="button" className="link-button" onClick={() => setStep("username")}>
+              Change
+            </button>
+          </p>
           <button type="button" className="primary-button" disabled={busy} onClick={() => onCreateRoom(username.trim())}>
             Create Room
           </button>
