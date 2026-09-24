@@ -46,19 +46,43 @@ function Legs({ color, count = 4, height = 0.34 }) {
   ));
 }
 
-// tailShape: "low" (straight out the back), "up" (two-segment upward curve),
-// "bushy" (one big arched puff, e.g. a squirrel).
+// tailShape: "low" (straight out the back), "trail" (long, thin, tapering,
+// drooping -- a rat's bare tail), "up" (two-segment upward curve), "bushy"
+// (a curled plume of puffs arcing up and over the back -- a squirrel's).
 // The body's rear cap is centered around (0, 0, -0.275) with radius 0.34 --
 // anchors here land well inside that (not just touching), a deliberate
 // safety margin so the tail reads as attached even accounting for its own
 // rotation shifting where its visible mass ends up.
 function Tail({ color, shape, length = 0.5 }) {
   if (shape === "bushy") {
-    return (
-      <mesh position={[0, 0.28, -0.45]} rotation={[0.7, 0, 0]}>
-        <sphereGeometry args={[0.32, 8, 7]} />
+    // A handful of overlapping puffs, shrinking as they arc up from the
+    // tail base and curl forward over the back, rather than one blob.
+    const puffs = [
+      { pos: [0, 0.05, -0.5], r: 0.16 },
+      { pos: [0, 0.26, -0.56], r: 0.19 },
+      { pos: [0, 0.46, -0.44], r: 0.2 },
+      { pos: [0, 0.55, -0.18], r: 0.17 },
+      { pos: [0, 0.48, 0.04], r: 0.13 },
+    ];
+    return puffs.map(({ pos, r }, i) => (
+      <mesh key={i} position={pos}>
+        <sphereGeometry args={[r, 8, 7]} />
         <meshStandardMaterial color={color} {...FLAT} />
       </mesh>
+    ));
+  }
+  if (shape === "trail") {
+    return (
+      <group position={[0, 0, -0.35]}>
+        <mesh position={[0, -0.02, -length * 0.28]} rotation={[1.48, 0, 0]}>
+          <cylinderGeometry args={[0.04, 0.055, length * 0.55, 6]} />
+          <meshStandardMaterial color={color} {...FLAT} />
+        </mesh>
+        <mesh position={[0, -0.09, -length * 0.62]} rotation={[1.32, 0, 0]}>
+          <cylinderGeometry args={[0.012, 0.04, length * 0.45, 6]} />
+          <meshStandardMaterial color={color} {...FLAT} />
+        </mesh>
+      </group>
     );
   }
   if (shape === "up") {
@@ -137,7 +161,7 @@ function Ears({ color, shape }) {
   );
 }
 
-function Quadruped({ color, snoutColor, earShape, tailShape, snoutLength = 0.28, legCount = 4 }) {
+function Quadruped({ color, snoutColor, earShape, tailShape, tailLength = 0.5, snoutLength = 0.28, legCount = 4 }) {
   return (
     <group>
       <mesh rotation={[Math.PI / 2, 0, 0]}>
@@ -156,7 +180,7 @@ function Quadruped({ color, snoutColor, earShape, tailShape, snoutLength = 0.28,
         <Eyes />
         <Ears color={color} shape={earShape} />
       </group>
-      <Tail color={color} shape={tailShape} />
+      <Tail color={color} shape={tailShape} length={tailLength} />
       <Legs color={color} count={legCount} />
     </group>
   );
@@ -171,11 +195,28 @@ export function Cat() {
 }
 
 export function Rat() {
-  return <Quadruped color="#7a7269" snoutColor="#a89f95" earShape="round" tailShape="low" snoutLength={0.3} />;
+  return (
+    <Quadruped
+      color="#5c5650"
+      snoutColor="#8f867d"
+      earShape="round"
+      tailShape="trail"
+      tailLength={1.15}
+      snoutLength={0.3}
+    />
+  );
 }
 
 export function Squirrel() {
-  return <Quadruped color="#a85c32" snoutColor="#d9a878" earShape="big" tailShape="bushy" snoutLength={0.18} />;
+  return (
+    <Quadruped
+      color="#a85c32"
+      snoutColor="#d9a878"
+      earShape="round"
+      tailShape="bushy"
+      snoutLength={0.18}
+    />
+  );
 }
 
 export function Pigeon() {
