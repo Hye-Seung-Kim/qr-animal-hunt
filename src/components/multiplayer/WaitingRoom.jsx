@@ -3,7 +3,8 @@ export function WaitingRoom({ room, players, onlinePlayerIds, isHost, onStart, b
 
   return (
     <div className="start-screen">
-      <h1>ROOM {room.room_code}</h1>
+      <p className="room-code-label">ROOM CODE</p>
+      <h1 className="room-code-value">{room.room_code}</h1>
       <ul className="player-list">
         {activePlayers.map((player) => (
           <li key={player.id} className={onlinePlayerIds.has(player.id) ? "" : "player-offline"}>

@@ -203,6 +203,21 @@
   font-size: 0.9rem;
 }
 
+.room-code-label {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: #71717a;
+}
+
+.room-code-value {
+  margin: 0 0 12px;
+  font-size: clamp(2.6rem, 12vw, 3.6rem);
+  letter-spacing: 0.1em;
+  color: #4ade80;
+}
+
 .player-list {
   list-style: none;
   margin: 0;
