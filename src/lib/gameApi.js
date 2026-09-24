@@ -21,19 +21,50 @@ async function insertRoomWithUniqueCode(hostPlayerId) {
   throw new Error("Could not generate a unique room code, please try again.");
 }
 
+function usernameTakenError(username) {
+  return new Error(`"${username}" is already taken in this room. Please choose a different username.`);
+}
+
+// Checked up front (fast, friendly error) *and* enforced by a unique index
+// in the database (see sql/002_unique_username_per_room.sql) for the rare
+// case of two people submitting the same new name at the same instant --
+// the pre-check alone can't close that race.
+async function assertUsernameAvailable({ roomId, playerId, username }) {
+  const { data: existingPlayers, error } = await supabase
+    .from("players")
+    .select("id, username")
+    .eq("room_id", roomId)
+    .eq("is_active", true);
+  if (error) throw error;
+
+  const taken = (existingPlayers || []).some(
+    (p) => p.id !== playerId && p.username.trim().toLowerCase() === username.toLowerCase(),
+  );
+  if (taken) throw usernameTakenError(username);
+}
+
+async function upsertPlayer({ playerId, roomId, username }) {
+  const { error } = await supabase
+    .from("players")
+    .upsert({ id: playerId, room_id: roomId, username, is_active: true, joined_at: new Date().toISOString() });
+  if (error) {
+    if (error.code === "23505") throw usernameTakenError(username);
+    throw error;
+  }
+}
+
 export async function createRoom({ playerId, username }) {
+  const trimmedUsername = username.trim();
   const room = await insertRoomWithUniqueCode(playerId);
   // Same browser/session re-creating a room after a previous game already
   // has a `players` row from that old room under this playerId (its primary
   // key) -- upsert moves that row to the new room instead of colliding.
-  const { error: playerError } = await supabase
-    .from("players")
-    .upsert({ id: playerId, room_id: room.id, username, is_active: true, joined_at: new Date().toISOString() });
-  if (playerError) throw playerError;
+  await upsertPlayer({ playerId, roomId: room.id, username: trimmedUsername });
   return room;
 }
 
 export async function joinRoom({ playerId, username, roomCode }) {
+  const trimmedUsername = username.trim();
   const { data: room, error: roomError } = await supabase
     .from("rooms")
     .select()
@@ -42,10 +73,8 @@ export async function joinRoom({ playerId, username, roomCode }) {
   if (roomError) throw roomError;
   if (!room) throw new Error("Room not found. Check the code and try again.");
 
-  const { error: playerError } = await supabase
-    .from("players")
-    .upsert({ id: playerId, room_id: room.id, username, is_active: true, joined_at: new Date().toISOString() });
-  if (playerError) throw playerError;
+  await assertUsernameAvailable({ roomId: room.id, playerId, username: trimmedUsername });
+  await upsertPlayer({ playerId, roomId: room.id, username: trimmedUsername });
   return room;
 }
 

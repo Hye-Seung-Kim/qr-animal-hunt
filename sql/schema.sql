@@ -30,6 +30,12 @@ create table if not exists players (
   joined_at timestamptz not null default now()
 );
 
+-- No two *active* players in the same room may share a username
+-- (case-insensitive). Partial index so a name frees up once someone leaves.
+create unique index if not exists players_room_username_unique
+  on players (room_id, lower(username))
+  where is_active;
+
 create table if not exists rounds (
   id uuid primary key default gen_random_uuid(),
   room_id uuid not null references rooms(id) on delete cascade,
