@@ -7,6 +7,7 @@ import {
   SQUIRREL_MODEL_URL,
   PIGEON_MODEL_URL,
   DOG_MODEL_URL,
+  COCKROACH_MODEL_URL,
 } from "./AnimalModels";
 import { GltfCritter } from "./GltfCritter";
 
@@ -90,6 +91,7 @@ export function AnimalScene({ trackedRef }) {
     GltfCritter.preload(SQUIRREL_MODEL_URL);
     GltfCritter.preload(PIGEON_MODEL_URL);
     GltfCritter.preload(DOG_MODEL_URL);
+    GltfCritter.preload(COCKROACH_MODEL_URL);
   }, []);
 
   return (
