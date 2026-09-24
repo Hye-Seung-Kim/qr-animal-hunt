@@ -7,7 +7,12 @@
 
 const FLAT = { flatShading: true, roughness: 0.75 };
 
-function Eyes({ z = 0.55, y = 0.15, spread = 0.16 }) {
+// The head sphere in Quadruped/Pigeon has radius 0.32/0.2 -- every anchor
+// point below is chosen to land at or slightly inside that surface (verified
+// by distance-from-center, not eyeballed) so parts read as attached rather
+// than floating, which is what "ears floating separately" turned out to be:
+// the old anchors were ~0.6 units from a 0.32-radius head.
+function Eyes({ z = 0.24, y = 0.12, spread = 0.16 }) {
   return (
     <>
       <mesh position={[-spread, y, z]}>
@@ -22,13 +27,19 @@ function Eyes({ z = 0.55, y = 0.15, spread = 0.16 }) {
   );
 }
 
-function Legs({ color, count = 4, bodyLength = 0.7, bodyWidth = 0.32, height = 0.28 }) {
-  const xs = count === 4 ? [-bodyWidth * 0.55, bodyWidth * 0.55] : [0];
-  const zs = count === 4 ? [-bodyLength * 0.32, bodyLength * 0.32] : [0];
+// Body capsule radius is 0.34; a leg anchored at y=-0.22 sits ~0.04 inside
+// that surface at these x offsets (embedded, not floating), then extends
+// down to y=-0.56 -- well outside the body, so the leg is actually visible
+// instead of hidden entirely inside the torso (the previous numbers put the
+// whole leg inside the body).
+function Legs({ color, count = 4, height = 0.34 }) {
+  const xs = count === 4 ? [-0.2, 0.2] : [0];
+  const zs = count === 4 ? [-0.2, 0.2] : [0];
+  const topY = -0.22;
   const positions = [];
-  zs.forEach((z) => xs.forEach((x) => positions.push([x, -height / 2, z])));
-  return positions.map(([x, y, z]) => (
-    <mesh key={`${x}-${z}`} position={[x, y, z]}>
+  zs.forEach((z) => xs.forEach((x) => positions.push([x, z])));
+  return positions.map(([x, z]) => (
+    <mesh key={`${x}-${z}`} position={[x, topY - height / 2, z]}>
       <cylinderGeometry args={[0.05, 0.06, height, 6]} />
       <meshStandardMaterial color={color} {...FLAT} />
     </mesh>
@@ -37,10 +48,14 @@ function Legs({ color, count = 4, bodyLength = 0.7, bodyWidth = 0.32, height = 0
 
 // tailShape: "low" (straight out the back), "up" (two-segment upward curve),
 // "bushy" (one big arched puff, e.g. a squirrel).
+// The body's rear cap is centered around (0, 0, -0.275) with radius 0.34 --
+// anchors here land well inside that (not just touching), a deliberate
+// safety margin so the tail reads as attached even accounting for its own
+// rotation shifting where its visible mass ends up.
 function Tail({ color, shape, length = 0.5 }) {
   if (shape === "bushy") {
     return (
-      <mesh position={[0, 0.35, -0.55]} rotation={[0.7, 0, 0]}>
+      <mesh position={[0, 0.28, -0.45]} rotation={[0.7, 0, 0]}>
         <sphereGeometry args={[0.32, 8, 7]} />
         <meshStandardMaterial color={color} {...FLAT} />
       </mesh>
@@ -48,7 +63,7 @@ function Tail({ color, shape, length = 0.5 }) {
   }
   if (shape === "up") {
     return (
-      <group position={[0, 0.05, -0.5]}>
+      <group position={[0, 0.05, -0.4]}>
         <mesh position={[0, 0.12, -0.05]} rotation={[0.9, 0, 0]}>
           <cylinderGeometry args={[0.05, 0.06, length * 0.6, 6]} />
           <meshStandardMaterial color={color} {...FLAT} />
@@ -61,7 +76,7 @@ function Tail({ color, shape, length = 0.5 }) {
     );
   }
   return (
-    <mesh position={[0, 0.02, -0.65]} rotation={[1.45, 0, 0]}>
+    <mesh position={[0, 0.02, -0.45]} rotation={[1.45, 0, 0]}>
       <cylinderGeometry args={[0.035, 0.06, length, 6]} />
       <meshStandardMaterial color={color} {...FLAT} />
     </mesh>
@@ -70,16 +85,21 @@ function Tail({ color, shape, length = 0.5 }) {
 
 // earShape: "floppy" (dog), "pointyLarge" (cat/rat), "round" (bear-ish/rat
 // alt), "big" (squirrel's more prominent pointed ears).
+//
+// Each anchor's distance from the head's center (radius 0.32) is noted --
+// all land at or just inside that radius, so the ear's own geometry (which
+// extends further from its anchor) is what pokes out, rather than the whole
+// ear floating in empty space next to the head.
 function Ears({ color, shape }) {
-  const common = [0.2, 0.5, 0.3];
   if (shape === "floppy") {
+    const anchor = [0.24, 0.05, 0.13]; // dist ~0.28, inside the 0.32 head
     return (
       <>
-        <mesh position={[-common[0], common[1] - 0.1, common[2]]} rotation={[0, 0, 0.5]}>
+        <mesh position={[-anchor[0], anchor[1], anchor[2]]} rotation={[0, 0, 0.6]}>
           <capsuleGeometry args={[0.08, 0.22, 3, 6]} />
           <meshStandardMaterial color={color} {...FLAT} />
         </mesh>
-        <mesh position={[common[0], common[1] - 0.1, common[2]]} rotation={[0, 0, -0.5]}>
+        <mesh position={[anchor[0], anchor[1], anchor[2]]} rotation={[0, 0, -0.6]}>
           <capsuleGeometry args={[0.08, 0.22, 3, 6]} />
           <meshStandardMaterial color={color} {...FLAT} />
         </mesh>
@@ -87,13 +107,14 @@ function Ears({ color, shape }) {
     );
   }
   if (shape === "round") {
+    const anchor = [0.2, 0.2, 0.1]; // dist ~0.30, inside the 0.32 head
     return (
       <>
-        <mesh position={[-common[0] * 0.8, common[1], common[2]]}>
+        <mesh position={[-anchor[0], anchor[1], anchor[2]]}>
           <sphereGeometry args={[0.12, 7, 6]} />
           <meshStandardMaterial color={color} {...FLAT} />
         </mesh>
-        <mesh position={[common[0] * 0.8, common[1], common[2]]}>
+        <mesh position={[anchor[0], anchor[1], anchor[2]]}>
           <sphereGeometry args={[0.12, 7, 6]} />
           <meshStandardMaterial color={color} {...FLAT} />
         </mesh>
@@ -101,13 +122,14 @@ function Ears({ color, shape }) {
     );
   }
   const scale = shape === "big" ? 1.3 : 1;
+  const anchor = [0.15, 0.2, 0.08]; // dist ~0.26, inside the 0.32 head
   return (
     <>
-      <mesh position={[-common[0], common[1] + 0.08 * scale, common[2]]} rotation={[0.1, 0, 0.25]} scale={scale}>
+      <mesh position={[-anchor[0], anchor[1], anchor[2]]} rotation={[0.1, 0, 0.3]} scale={scale}>
         <coneGeometry args={[0.11, 0.28, 6]} />
         <meshStandardMaterial color={color} {...FLAT} />
       </mesh>
-      <mesh position={[common[0], common[1] + 0.08 * scale, common[2]]} rotation={[0.1, 0, -0.25]} scale={scale}>
+      <mesh position={[anchor[0], anchor[1], anchor[2]]} rotation={[0.1, 0, -0.3]} scale={scale}>
         <coneGeometry args={[0.11, 0.28, 6]} />
         <meshStandardMaterial color={color} {...FLAT} />
       </mesh>
@@ -131,7 +153,7 @@ function Quadruped({ color, snoutColor, earShape, tailShape, snoutLength = 0.28,
           <cylinderGeometry args={[0.13, 0.16, snoutLength, 7]} />
           <meshStandardMaterial color={snoutColor || color} {...FLAT} />
         </mesh>
-        <Eyes z={0.28} />
+        <Eyes />
         <Ears color={color} shape={earShape} />
       </group>
       <Tail color={color} shape={tailShape} />
@@ -173,7 +195,7 @@ export function Pigeon() {
           <coneGeometry args={[0.06, 0.18, 6]} />
           <meshStandardMaterial color="#e8a53d" {...FLAT} />
         </mesh>
-        <Eyes z={0.16} y={0.05} spread={0.12} />
+        <Eyes z={0.14} y={0.05} spread={0.12} />
       </group>
       <mesh position={[-0.34, 0, 0]} rotation={[0, 0, 0.5]}>
         <boxGeometry args={[0.45, 0.06, 0.32]} />
