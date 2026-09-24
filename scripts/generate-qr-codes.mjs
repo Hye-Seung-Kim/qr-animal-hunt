@@ -9,10 +9,15 @@ import QRCode from "qrcode";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.join(__dirname, "..", "public", "qr-codes");
 
+// Mirrors src/data/animals.js — these are the real QR payloads already in
+// use (see the qrcode-tracking prototype), repurposed to trigger animals.
 const CODES = [
-  { id: "CAT_001", label: "Cat" },
-  { id: "DOG_001", label: "Dog" },
-  { id: "FROG_001", label: "Frog" },
+  { id: "object-c", label: "Dog" },
+  { id: "notebook", label: "Cat" },
+  { id: "object-b", label: "Pigeon" },
+  { id: "bottle", label: "Rat" },
+  { id: "phone", label: "Squirrel" },
+  { id: "object-a", label: "Cockroach" },
 ];
 
 await mkdir(outDir, { recursive: true });
