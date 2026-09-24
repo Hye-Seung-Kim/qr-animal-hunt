@@ -131,38 +131,144 @@
   to { opacity: 1; transform: translate(-50%, 0) scale(1); }
 }
 
-.collection {
-  position: absolute;
-  bottom: env(safe-area-inset-bottom);
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.65), transparent);
+.text-input {
+  font-size: 1.05rem;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px solid #3f3f46;
+  background: #18181b;
+  color: #f4f4f5;
+  width: min(80vw, 280px);
+  text-align: center;
 }
 
-.collection-item {
+.text-input:focus {
+  outline: 2px solid #4ade80;
+}
+
+.secondary-button {
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 14px 32px;
+  border-radius: 999px;
+  border: 1px solid #52525b;
+  background: transparent;
+  color: #f4f4f5;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.room-choice {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  opacity: 0.5;
-  min-width: 52px;
+  gap: 12px;
 }
 
-.collection-item-found {
-  opacity: 1;
+.room-choice-divider {
+  color: #71717a;
+  font-size: 0.85rem;
 }
 
-.collection-emoji {
-  font-size: 1.6rem;
+.landing-error {
+  color: #fca5a5;
+  font-size: 0.9rem;
 }
 
-.collection-name {
-  font-size: 0.7rem;
-  color: #e4e4e7;
+.player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 1.1rem;
+}
+
+.player-offline {
+  opacity: 0.4;
+}
+
+.host-crown {
+  color: #fde68a;
+  font-size: 0.8rem;
+}
+
+.round-target-banner {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+.round-target-emoji {
+  font-size: 2rem;
+}
+
+.countdown-overlay {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0c1420;
+}
+
+.countdown-number {
+  font-size: 6rem;
+  font-weight: 800;
+  color: #4ade80;
+}
+
+.leaderboard-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: min(85vw, 320px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.leaderboard-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.leaderboard-row-me {
+  border: 1px solid #4ade80;
+  background: rgba(74, 222, 128, 0.1) !important;
+}
+
+.leaderboard-rank {
+  min-width: 28px;
+  font-weight: 700;
+}
+
+.leaderboard-name {
+  flex: 1;
+  text-align: left;
+}
+
+.leaderboard-wins {
+  color: #a1a1aa;
+  font-size: 0.9rem;
+}
+
+.result-winner {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fde68a;
 }
 
 .error-banner {
