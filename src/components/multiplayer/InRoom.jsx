@@ -7,6 +7,7 @@ import { CountdownOverlay } from "./CountdownOverlay";
 import { RoundScreen } from "./RoundScreen";
 import { RoundResultScreen } from "./RoundResultScreen";
 import { FinalLeaderboard } from "./FinalLeaderboard";
+import { ExitButton } from "./ExitButton";
 import { startCountdown, resetForPlayAgain, leaveRoom } from "../../lib/gameApi";
 
 export function InRoom({ roomId, playerId, username, onLeaveRoom }) {
@@ -61,7 +62,12 @@ export function InRoom({ roomId, playerId, username, onLeaveRoom }) {
   }
 
   if (room.status === "countdown") {
-    return <CountdownOverlay />;
+    return (
+      <>
+        <CountdownOverlay />
+        <ExitButton onLeave={handleLeave} />
+      </>
+    );
   }
 
   if (room.status === "playing") {
@@ -69,10 +75,16 @@ export function InRoom({ roomId, playerId, username, onLeaveRoom }) {
     if (!currentRound) {
       return <div className="start-screen"><p>Loading round...</p></div>;
     }
-    if (currentRound.status === "active") {
-      return <RoundScreen room={room} round={currentRound} playerId={playerId} />;
-    }
-    return <RoundResultScreen round={currentRound} players={players} playerId={playerId} />;
+    return (
+      <>
+        {currentRound.status === "active" ? (
+          <RoundScreen room={room} round={currentRound} playerId={playerId} />
+        ) : (
+          <RoundResultScreen round={currentRound} players={players} playerId={playerId} />
+        )}
+        <ExitButton onLeave={handleLeave} />
+      </>
+    );
   }
 
   if (room.status === "finished") {

@@ -10,8 +10,8 @@ import { renderOverlay } from "../lib/overlayRenderer";
 import { playAnimalSound } from "../lib/sounds";
 import { getAnimal } from "../data/animals";
 
-const DETECTION_MAX_DIMENSION = 720;
-const SCAN_INTERVAL_MS = 100; // ~10fps decode, well within the 10-15fps budget
+const DETECTION_MAX_DIMENSION = 900;
+const SCAN_INTERVAL_MS = 80; // ~12.5fps decode, within the 10-15fps budget
 const MAX_QR_CODES = 8;
 const LERP_FACTOR = 0.35;
 
@@ -23,7 +23,31 @@ const GRACE_MS = 500; // fully visible even if momentarily lost
 const FADE_END_MS = 1200; // fully faded out by this point
 const REMOVE_MS = 2000; // untracked entirely; re-appearance triggers a fresh discovery + sound
 
-// Runs the camera -> canvas -> jsQR -> tracked-animal-state -> overlay-draw
+// Chrome/Android's native BarcodeDetector uses the OS's own (often
+// hardware-accelerated) decoder directly on the video frame at full
+// resolution -- no manual downscale/getImageData round-trip -- and is
+// noticeably faster and more reliable at range than jsQR. Safari doesn't
+// implement it, so jsQR stays as the fallback. Built once at module scope
+// since support doesn't change at runtime.
+let nativeDetector = null;
+if (typeof window !== "undefined" && "BarcodeDetector" in window) {
+  try {
+    nativeDetector = new window.BarcodeDetector({ formats: ["qr_code"] });
+  } catch {
+    nativeDetector = null;
+  }
+}
+
+function cornerPointsToLocation(points) {
+  return {
+    topLeftCorner: points[0],
+    topRightCorner: points[1],
+    bottomRightCorner: points[2],
+    bottomLeftCorner: points[3],
+  };
+}
+
+// Runs the camera -> canvas -> decoder -> tracked-animal-state -> overlay-draw
 // pipeline entirely outside React state, so a busy scene with several QR
 // codes doesn't cause a re-render every frame. The only thing that crosses
 // back into React is the onDiscover callback, fired once per fresh sighting.
@@ -46,6 +70,7 @@ export function useQRScanner({ videoRef, canvasRef, active, onDiscover, trackedR
     let detectionScaleY = 1;
     let lastScanTime = -SCAN_INTERVAL_MS;
     let rafId = null;
+    let scanning = false;
     // Shared with the 3D layer (AnimalScene) when a trackedRef is supplied,
     // so it can read the same live entries from its own render loop without
     // this hook needing to know anything about three.js.
@@ -63,12 +88,19 @@ export function useQRScanner({ videoRef, canvasRef, active, onDiscover, trackedR
       sampleCtx = sampleCanvas.getContext("2d", { willReadFrequently: true });
     }
 
-    function scanCurrentFrame() {
+    function scanWithJsQR() {
       sampleCtx.drawImage(video, 0, 0, sampleCanvas.width, sampleCanvas.height);
       const imageData = sampleCtx.getImageData(0, 0, sampleCanvas.width, sampleCanvas.height);
       const decoder = (pixels, width, height) => jsQR(pixels, width, height, { inversionAttempts: "attemptBoth" });
       return scanImageDataForQRCodes(imageData, decoder, MAX_QR_CODES)
         .map((detection) => mapDetectionToSource(detection, detectionScaleX, detectionScaleY));
+    }
+
+    async function scanWithNativeDetector() {
+      const barcodes = await nativeDetector.detect(video);
+      return barcodes
+        .filter((barcode) => barcode.cornerPoints?.length === 4)
+        .map((barcode) => ({ data: barcode.rawValue, location: cornerPointsToLocation(barcode.cornerPoints) }));
     }
 
     function updateTracking(detections, now) {
@@ -109,10 +141,23 @@ export function useQRScanner({ videoRef, canvasRef, active, onDiscover, trackedR
       }
     }
 
+    async function runScan(timestamp) {
+      if (scanning) return; // previous scan (native path is async) still in flight
+      scanning = true;
+      try {
+        const detections = nativeDetector ? await scanWithNativeDetector() : scanWithJsQR();
+        updateTracking(detections, timestamp);
+      } catch {
+        // A transient bad frame (e.g. mid-resize); just skip this tick.
+      } finally {
+        scanning = false;
+      }
+    }
+
     function tick(timestamp) {
-      if (video.readyState === video.HAVE_ENOUGH_DATA && timestamp - lastScanTime >= SCAN_INTERVAL_MS) {
+      if (video.readyState === video.HAVE_ENOUGH_DATA && timestamp - lastScanTime >= SCAN_INTERVAL_MS && !scanning) {
         lastScanTime = timestamp;
-        updateTracking(scanCurrentFrame(), timestamp);
+        runScan(timestamp);
       }
       updateVisuals(timestamp);
       renderOverlay(ctx, canvas, [...tracked.values()].filter((entry) => entry.opacity > 0.01), timestamp);
