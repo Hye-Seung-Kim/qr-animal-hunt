@@ -29,14 +29,17 @@ export function RoundScreen({ room, round, playerId }) {
   }, [round.id, round.target_animal, round.started_at, playerId]);
 
   const remainingSeconds = Math.ceil(remainingMs / 1000);
+  const isUrgent = remainingSeconds <= 5 && remainingSeconds > 0;
 
   return (
     <div className="game-screen">
       <CameraView onDiscover={handleDiscover} onStatusChange={setCameraStatus} />
 
+      {isUrgent && <div className="urgent-flash" aria-hidden="true" />}
+
       <div className="hud-top">
         <span className="hud-title">Round {room.current_round} / {TOTAL_ROUNDS}</span>
-        <span className="hud-count">{remainingSeconds}s</span>
+        <span className={`hud-count${isUrgent ? " hud-count-urgent" : ""}`}>{remainingSeconds}s</span>
       </div>
 
       <div className="round-target-banner">
