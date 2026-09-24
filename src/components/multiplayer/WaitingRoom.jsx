@@ -1,4 +1,4 @@
-export function WaitingRoom({ room, players, onlinePlayerIds, isHost, onStart, busy }) {
+export function WaitingRoom({ room, players, onlinePlayerIds, isHost, onStart, onLeave, busy }) {
   const activePlayers = players.filter((p) => p.is_active);
 
   return (
@@ -22,6 +22,10 @@ export function WaitingRoom({ room, players, onlinePlayerIds, isHost, onStart, b
       ) : (
         <p>Waiting for host...</p>
       )}
+
+      <button type="button" className="secondary-button" onClick={onLeave}>
+        Leave Room
+      </button>
     </div>
   );
 }

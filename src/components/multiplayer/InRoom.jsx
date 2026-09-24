@@ -55,6 +55,7 @@ export function InRoom({ roomId, playerId, username, onLeaveRoom }) {
         isHost={isHost}
         busy={busy}
         onStart={() => withBusy(() => startCountdown(roomId))}
+        onLeave={handleLeave}
       />
     );
   }
