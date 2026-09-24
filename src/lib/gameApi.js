@@ -23,9 +23,12 @@ async function insertRoomWithUniqueCode(hostPlayerId) {
 
 export async function createRoom({ playerId, username }) {
   const room = await insertRoomWithUniqueCode(playerId);
+  // Same browser/session re-creating a room after a previous game already
+  // has a `players` row from that old room under this playerId (its primary
+  // key) -- upsert moves that row to the new room instead of colliding.
   const { error: playerError } = await supabase
     .from("players")
-    .insert({ id: playerId, room_id: room.id, username });
+    .upsert({ id: playerId, room_id: room.id, username, is_active: true, joined_at: new Date().toISOString() });
   if (playerError) throw playerError;
   return room;
 }
@@ -41,7 +44,7 @@ export async function joinRoom({ playerId, username, roomCode }) {
 
   const { error: playerError } = await supabase
     .from("players")
-    .upsert({ id: playerId, room_id: room.id, username, is_active: true });
+    .upsert({ id: playerId, room_id: room.id, username, is_active: true, joined_at: new Date().toISOString() });
   if (playerError) throw playerError;
   return room;
 }
