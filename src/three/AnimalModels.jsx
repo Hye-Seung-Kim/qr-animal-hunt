@@ -99,6 +99,27 @@ function Tail({ color, shape, length = 0.5 }) {
       </group>
     );
   }
+  if (shape === "straightUp") {
+    // A cat's tail: mostly vertical with a slight backward lean, tapering
+    // to a fine point, with just a small hook at the very tip -- not the
+    // curled-over shape "up" makes.
+    return (
+      <group position={[0, 0.05, -0.42]}>
+        <mesh position={[0, 0.18, -0.02]} rotation={[0.35, 0, 0]}>
+          <cylinderGeometry args={[0.055, 0.065, length * 0.55, 6]} />
+          <meshStandardMaterial color={color} {...FLAT} />
+        </mesh>
+        <mesh position={[0, 0.42, -0.1]} rotation={[0.25, 0, 0]}>
+          <cylinderGeometry args={[0.03, 0.055, length * 0.4, 6]} />
+          <meshStandardMaterial color={color} {...FLAT} />
+        </mesh>
+        <mesh position={[0, 0.62, -0.12]} rotation={[0.65, 0, 0]}>
+          <cylinderGeometry args={[0.012, 0.03, length * 0.2, 6]} />
+          <meshStandardMaterial color={color} {...FLAT} />
+        </mesh>
+      </group>
+    );
+  }
   return (
     <mesh position={[0, 0.02, -0.45]} rotation={[1.45, 0, 0]}>
       <cylinderGeometry args={[0.035, 0.06, length, 6]} />
@@ -187,11 +208,11 @@ function Quadruped({ color, snoutColor, earShape, tailShape, tailLength = 0.5, s
 }
 
 export function Dog() {
-  return <Quadruped color="#c98a4b" snoutColor="#e8c19a" earShape="floppy" tailShape="up" snoutLength={0.32} />;
+  return <Quadruped color="#c98a4b" snoutColor="#e8c19a" earShape="pointyLarge" tailShape="up" snoutLength={0.26} />;
 }
 
 export function Cat() {
-  return <Quadruped color="#8a8a92" snoutColor="#c7c7cf" earShape="pointyLarge" tailShape="up" snoutLength={0.2} />;
+  return <Quadruped color="#8a8a92" snoutColor="#c7c7cf" earShape="pointyLarge" tailShape="straightUp" snoutLength={0.2} />;
 }
 
 export function Rat() {
@@ -220,71 +241,84 @@ export function Squirrel() {
 }
 
 export function Pigeon() {
-  const color = "#8d95a3";
+  const bodyColor = "#8d95a3";
+  const neckColor = "#6b7a8a";
+  const wingColor = "#6b7280";
   return (
     <group>
-      <mesh scale={[1, 1.15, 1.3]}>
-        <sphereGeometry args={[0.36, 8, 7]} />
-        <meshStandardMaterial color={color} {...FLAT} />
+      {/* Upright egg-shaped body instead of a flying pose -- pigeons at
+          rest stand tall with wings folded, not spread out to the sides. */}
+      <mesh scale={[0.85, 1.25, 0.95]}>
+        <sphereGeometry args={[0.32, 8, 7]} />
+        <meshStandardMaterial color={bodyColor} {...FLAT} />
       </mesh>
-      <group position={[0, 0.32, 0.32]}>
+      <mesh position={[0, 0.35, 0.12]} rotation={[0.35, 0, 0]}>
+        <cylinderGeometry args={[0.1, 0.14, 0.22, 7]} />
+        <meshStandardMaterial color={neckColor} {...FLAT} />
+      </mesh>
+      <group position={[0, 0.52, 0.26]}>
         <mesh>
-          <sphereGeometry args={[0.2, 7, 6]} />
-          <meshStandardMaterial color={color} {...FLAT} />
+          <sphereGeometry args={[0.16, 7, 6]} />
+          <meshStandardMaterial color={neckColor} {...FLAT} />
         </mesh>
-        <mesh position={[0, -0.02, 0.2]} rotation={[Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[0.06, 0.18, 6]} />
-          <meshStandardMaterial color="#e8a53d" {...FLAT} />
+        <mesh position={[0, -0.02, 0.16]} rotation={[Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[0.045, 0.14, 6]} />
+          <meshStandardMaterial color="#3a3f47" {...FLAT} />
         </mesh>
-        <Eyes z={0.14} y={0.05} spread={0.12} />
+        <Eyes z={0.12} y={0.02} spread={0.1} />
       </group>
-      <mesh position={[-0.34, 0, 0]} rotation={[0, 0, 0.5]}>
-        <boxGeometry args={[0.45, 0.06, 0.32]} />
-        <meshStandardMaterial color="#6b7280" {...FLAT} />
-      </mesh>
-      <mesh position={[0.34, 0, 0]} rotation={[0, 0, -0.5]}>
-        <boxGeometry args={[0.45, 0.06, 0.32]} />
-        <meshStandardMaterial color="#6b7280" {...FLAT} />
-      </mesh>
-      <mesh position={[0, -0.05, -0.42]} rotation={[0.3, 0, 0]}>
-        <boxGeometry args={[0.32, 0.05, 0.28]} />
+      {/* Wings held close against the flanks (near-vertical capsules with
+          only a slight outward lean), not sticking out to the sides. */}
+      {[-1, 1].map((side) => (
+        <mesh key={side} position={[side * 0.3, -0.02, -0.04]} rotation={[0, 0, side * 0.15]}>
+          <capsuleGeometry args={[0.1, 0.38, 3, 6]} />
+          <meshStandardMaterial color={wingColor} {...FLAT} />
+        </mesh>
+      ))}
+      <mesh position={[0, -0.1, -0.42]} rotation={[1.15, 0, 0]}>
+        <boxGeometry args={[0.34, 0.03, 0.26]} />
         <meshStandardMaterial color="#4b5160" {...FLAT} />
       </mesh>
-      <mesh position={[0, -0.35, 0]}>
-        <cylinderGeometry args={[0.04, 0.04, 0.3, 5]} />
-        <meshStandardMaterial color="#e8a53d" {...FLAT} />
-      </mesh>
+      {[-0.06, 0.06].map((x) => (
+        <mesh key={x} position={[x, -0.5, 0]}>
+          <cylinderGeometry args={[0.025, 0.025, 0.3, 5]} />
+          <meshStandardMaterial color="#c0392b" {...FLAT} />
+        </mesh>
+      ))}
     </group>
   );
 }
 
 export function Cockroach() {
-  const color = "#3b2a20";
-  const legAngles = [-0.9, 0, 0.9];
+  const color = "#3b2216";
+  // Each leg row gets its own splay angle (shallower up front, steeper
+  // toward the back) so the six legs radiate outward like the reference
+  // photo instead of all sitting parallel to each other.
+  const rows = [
+    { z: 0.26, angle: 0.5 },
+    { z: 0, angle: 0.95 },
+    { z: -0.24, angle: 1.3 },
+  ];
   return (
-    <group rotation={[0, 0, 0]}>
-      <mesh scale={[0.62, 0.38, 1]}>
+    <group>
+      <mesh scale={[0.55, 0.32, 1.15]}>
         <sphereGeometry args={[0.42, 8, 7]} />
-        <meshStandardMaterial color={color} {...FLAT} metalness={0.2} roughness={0.4} />
+        <meshStandardMaterial color={color} {...FLAT} metalness={0.25} roughness={0.35} />
       </mesh>
-      <mesh position={[0, 0.02, 0.4]} scale={[0.5, 0.35, 0.5]}>
-        <sphereGeometry args={[0.24, 7, 6]} />
-        <meshStandardMaterial color={color} {...FLAT} metalness={0.2} roughness={0.4} />
+      <mesh position={[0, 0.03, 0.46]} scale={[0.46, 0.3, 0.4]}>
+        <sphereGeometry args={[0.26, 7, 6]} />
+        <meshStandardMaterial color={color} {...FLAT} metalness={0.25} roughness={0.35} />
       </mesh>
-      {[-0.06, 0.06].map((x) => (
-        <mesh key={x} position={[x, 0.1, 0.55]} rotation={[1.4, 0, x > 0 ? 0.3 : -0.3]}>
-          <cylinderGeometry args={[0.012, 0.02, 0.4, 4]} />
+      {[-0.05, 0.05].map((x) => (
+        <mesh key={x} position={[x, 0.12, 0.58]} rotation={[1.3, 0, x > 0 ? 0.35 : -0.35]}>
+          <cylinderGeometry args={[0.01, 0.018, 0.55, 4]} />
           <meshStandardMaterial color={color} {...FLAT} />
         </mesh>
       ))}
-      {legAngles.map((z) =>
+      {rows.map(({ z, angle }) =>
         [-1, 1].map((side) => (
-          <mesh
-            key={`${z}-${side}`}
-            position={[side * 0.32, -0.08, z * 0.16]}
-            rotation={[0, 0, side * 0.9]}
-          >
-            <cylinderGeometry args={[0.02, 0.025, 0.34, 4]} />
+          <mesh key={`${z}-${side}`} position={[side * 0.3, -0.06, z]} rotation={[0, 0, side * angle]}>
+            <cylinderGeometry args={[0.018, 0.024, 0.4, 4]} />
             <meshStandardMaterial color={color} {...FLAT} />
           </mesh>
         )),
