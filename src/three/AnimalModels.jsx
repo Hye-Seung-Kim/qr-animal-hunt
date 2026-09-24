@@ -332,14 +332,19 @@ export function Cockroach() {
 }
 
 export const RAT_MODEL_URL = "/assets/models/rat.glb";
+export const CAT_MODEL_URL = "/assets/models/cat.glb";
 
 function GltfRat() {
   return <GltfCritter url={RAT_MODEL_URL} targetSize={1.5} />;
 }
 
+function GltfCat() {
+  return <GltfCritter url={CAT_MODEL_URL} targetSize={1.5} />;
+}
+
 const SPECIES = {
   dog: Dog,
-  cat: Cat,
+  cat: GltfCat,
   pigeon: Pigeon,
   rat: GltfRat,
   squirrel: Squirrel,

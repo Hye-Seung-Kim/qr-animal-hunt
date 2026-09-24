@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { AnimalMesh, RAT_MODEL_URL } from "./AnimalModels";
+import { AnimalMesh, RAT_MODEL_URL, CAT_MODEL_URL } from "./AnimalModels";
 import { GltfCritter } from "./GltfCritter";
 
 function backOut(t) {
@@ -73,12 +73,13 @@ function AnimalRig({ trackedRef }) {
 // "pin it to screen center" decision), reading the same live tracking data
 // useQRScanner already maintains rather than a separate React state stream.
 export function AnimalScene({ trackedRef }) {
-  // Start downloading the rat model as soon as a round begins (this
+  // Start downloading the glb-backed models as soon as a round begins (this
   // component only mounts once CameraView does), rather than waiting until
-  // "rat" is actually the detected species -- by the time a player finds
-  // that QR, the model should already be cached and load instantly.
+  // one is actually the detected species -- by the time a player finds that
+  // QR, the model should already be cached and load instantly.
   useEffect(() => {
     GltfCritter.preload(RAT_MODEL_URL);
+    GltfCritter.preload(CAT_MODEL_URL);
   }, []);
 
   return (
