@@ -90,13 +90,12 @@
 }
 
 .hud-count-urgent {
+  /* Static color only -- animating this text's opacity caused a rendering
+     glitch on some mobile browsers where the previous digit stayed visible,
+     ghosted behind the new one, because the text content changes every
+     250ms while the animation is mid-fade. The pulsing red vignette below
+     already carries the "urgent" feel. */
   color: #fca5a5;
-  animation: urgent-text-pulse 0.6s ease-in-out infinite;
-}
-
-@keyframes urgent-text-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
 }
 
 .urgent-flash {
