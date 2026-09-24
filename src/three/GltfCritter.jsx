@@ -9,19 +9,26 @@ import { Box3, Vector3 } from "three";
 // one needing hand-tuned numbers. `targetSize` is the desired largest
 // dimension (X/Y/Z) after scaling -- tune per-model if one still reads as
 // too big/small relative to the others.
+//
+// Deliberately renders gltf.scene directly instead of cloning it: only one
+// species is ever mounted at a time (see AnimalRig), so there's no need for
+// a separate instance, and Object3D.clone(true) is well known to break
+// SkinnedMesh models -- it doesn't correctly rebind the cloned skeleton's
+// bones to the cloned mesh, which silently breaks rendering (this is
+// exactly what happened to the rigged/animated cat model).
 export function GltfCritter({ url, targetSize = 1.4 }) {
   const gltf = useLoader(GLTFLoader, url);
 
   const { scene, scale, offset } = useMemo(() => {
-    const cloned = gltf.scene.clone(true);
-    const box = new Box3().setFromObject(cloned);
+    const model = gltf.scene;
+    const box = new Box3().setFromObject(model);
     const size = new Vector3();
     box.getSize(size);
     const center = new Vector3();
     box.getCenter(center);
     const largestDimension = Math.max(size.x, size.y, size.z) || 1;
     return {
-      scene: cloned,
+      scene: model,
       scale: targetSize / largestDimension,
       offset: [-center.x, -box.min.y, -center.z],
     };
