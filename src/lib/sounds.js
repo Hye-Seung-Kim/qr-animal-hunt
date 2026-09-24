@@ -59,6 +59,42 @@ function noiseBurst(ctx, { start, duration, gain = 0.15, filterFreq = 3000 }) {
   source.stop(start + duration + 0.01);
 }
 
+// A dedicated envelope/filter chain (rather than the generic `tone` helper)
+// for one "woof": a sharp broadband attack, two detuned+low-passed sawtooth
+// layers sweeping down fast for body and roughness, and a low sub thump for
+// chest resonance. The fast attack/decay envelope (not `tone`'s smooth
+// ramp) is what makes this read as a percussive bark instead of a synth blip.
+function bark(ctx, start) {
+  const duration = 0.13;
+
+  noiseBurst(ctx, { start, duration: 0.02, gain: 0.28, filterFreq: 700 });
+
+  [-6, 6].forEach((detune) => {
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gainNode = ctx.createGain();
+
+    osc.type = "sawtooth";
+    osc.detune.value = detune;
+    osc.frequency.setValueAtTime(480, start);
+    osc.frequency.exponentialRampToValueAtTime(110, start + duration);
+
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(2200, start);
+    filter.frequency.exponentialRampToValueAtTime(500, start + duration);
+
+    gainNode.gain.setValueAtTime(0.0001, start);
+    gainNode.gain.exponentialRampToValueAtTime(0.3, start + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+    osc.connect(filter).connect(gainNode).connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + duration + 0.02);
+  });
+
+  tone(ctx, { start, duration: duration * 0.85, freqStart: 190, freqEnd: 65, type: "square", gain: 0.15 });
+}
+
 const RECIPES = {
   cat(ctx, t0) {
     // Short upward-then-downward chirp, roughly "meow"-shaped.
@@ -66,16 +102,8 @@ const RECIPES = {
     tone(ctx, { start: t0 + 0.16, duration: 0.22, freqStart: 850, freqEnd: 350, type: "triangle", gain: 0.22 });
   },
   dog(ctx, t0) {
-    // "Ruff-ruff": a noisy transient for the sharp attack, a fast-falling
-    // sawtooth for the bark's body, and a low square layer underneath for
-    // some chest resonance.
-    function bark(start) {
-      noiseBurst(ctx, { start, duration: 0.02, gain: 0.2, filterFreq: 900 });
-      tone(ctx, { start, duration: 0.1, freqStart: 650, freqEnd: 130, type: "sawtooth", gain: 0.3 });
-      tone(ctx, { start, duration: 0.1, freqStart: 260, freqEnd: 90, type: "square", gain: 0.16 });
-    }
-    bark(t0);
-    bark(t0 + 0.19);
+    bark(ctx, t0);
+    bark(ctx, t0 + 0.2);
   },
   pigeon(ctx, t0) {
     // Two soft, low warbling coos.
