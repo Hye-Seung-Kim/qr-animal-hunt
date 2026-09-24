@@ -10,7 +10,11 @@ see "Multiplayer (planned)" below.
 
 ## Live demo
 
-_(fill in after first Netlify deploy)_
+https://qr-animal-hunt.netlify.app
+
+Open on your phone, allow camera access, and scan a QR code from
+https://qr-animal-hunt.netlify.app/test-qr-codes.html (pull that page up on a
+second screen).
 
 ## How it works
 
