@@ -22,17 +22,30 @@ export function GltfCritter({ url, targetSize = 1.4 }) {
   const { scene, scale, offset } = useMemo(() => {
     const model = gltf.scene;
     const box = new Box3().setFromObject(model);
+
+    // An empty box (Box3's min/max default to +-Infinity) would otherwise
+    // silently produce an Infinity/NaN offset -- the model renders, just
+    // positioned off at infinity, which looks identical to "not showing at
+    // all". Falling back to an untransformed scale/position at least makes
+    // it visible (even if not perfectly centered) instead of invisible.
+    if (box.isEmpty()) {
+      console.error(`GltfCritter: empty bounding box for ${url}; rendering at default scale/position.`);
+      return { scene: model, scale: 1, offset: [0, 0, 0] };
+    }
+
     const size = new Vector3();
     box.getSize(size);
     const center = new Vector3();
     box.getCenter(center);
-    const largestDimension = Math.max(size.x, size.y, size.z) || 1;
+    const largestDimension = Math.max(size.x, size.y, size.z);
+    const safeDimension = Number.isFinite(largestDimension) && largestDimension > 0 ? largestDimension : 1;
+
     return {
       scene: model,
-      scale: targetSize / largestDimension,
+      scale: targetSize / safeDimension,
       offset: [-center.x, -box.min.y, -center.z],
     };
-  }, [gltf, targetSize]);
+  }, [gltf, targetSize, url]);
 
   return (
     <group scale={scale}>
