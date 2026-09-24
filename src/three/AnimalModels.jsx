@@ -1,9 +1,13 @@
-// Simple low-poly critters built entirely from three.js primitives -- no
-// downloaded model files, so there's nothing to source, license, or verify.
-// Low segment counts + flatShading give the faceted "low-poly toy" look.
-// Each species is a thin wrapper around <Quadruped> (or its own build for
-// the two-legged pigeon and six-legged cockroach) that only varies color and
-// a few silhouette shapes, so the six animals share one body rig.
+// Most critters are built entirely from three.js primitives -- no downloaded
+// model files, so there's nothing to source, license, or verify. Low segment
+// counts + flatShading give the faceted "low-poly toy" look. Each species is
+// a thin wrapper around <Quadruped> (or its own build for the two-legged
+// pigeon and six-legged cockroach) that only varies color and a few
+// silhouette shapes, so most of the six animals share one body rig.
+// The rat is the exception: a real downloaded .glb (see GltfCritter) after
+// primitives kept landing on "close but off" for it specifically.
+
+import { GltfCritter } from "./GltfCritter";
 
 const FLAT = { flatShading: true, roughness: 0.75 };
 
@@ -327,11 +331,17 @@ export function Cockroach() {
   );
 }
 
+export const RAT_MODEL_URL = "/assets/models/rat.glb";
+
+function GltfRat() {
+  return <GltfCritter url={RAT_MODEL_URL} targetSize={1.5} />;
+}
+
 const SPECIES = {
   dog: Dog,
   cat: Cat,
   pigeon: Pigeon,
-  rat: Rat,
+  rat: GltfRat,
   squirrel: Squirrel,
   cockroach: Cockroach,
 };

@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { AnimalMesh } from "./AnimalModels";
+import { AnimalMesh, RAT_MODEL_URL } from "./AnimalModels";
+import { GltfCritter } from "./GltfCritter";
 
 function backOut(t) {
   const c1 = 1.70158;
@@ -55,7 +56,13 @@ function AnimalRig({ trackedRef }) {
 
   return (
     <group ref={groupRef} scale={0}>
-      {species && <AnimalMesh species={species} />}
+      {/* useLoader (used by any glb-backed species, e.g. the rat) suspends
+          while its file downloads -- this boundary must live inside the r3f
+          tree, not just wherever <AnimalScene> itself happens to be lazy-
+          loaded from. fallback={null} means an unfinished load just shows
+          nothing rather than a placeholder, which is fine since it's
+          preloaded well before it's actually needed (see below). */}
+      <Suspense fallback={null}>{species && <AnimalMesh species={species} />}</Suspense>
     </group>
   );
 }
@@ -66,6 +73,14 @@ function AnimalRig({ trackedRef }) {
 // "pin it to screen center" decision), reading the same live tracking data
 // useQRScanner already maintains rather than a separate React state stream.
 export function AnimalScene({ trackedRef }) {
+  // Start downloading the rat model as soon as a round begins (this
+  // component only mounts once CameraView does), rather than waiting until
+  // "rat" is actually the detected species -- by the time a player finds
+  // that QR, the model should already be cached and load instantly.
+  useEffect(() => {
+    GltfCritter.preload(RAT_MODEL_URL);
+  }, []);
+
   return (
     <Canvas
       gl={{ alpha: true, antialias: true }}
